@@ -6,10 +6,20 @@
 
 #include <zephyr.h>
 #include <logging/log.h>
+#include <usb/usb_device.h>
 LOG_MODULE_REGISTER(main);
 
 void main(void)
 {
+	int ret;
+
+	ret = usb_enable();
+	if (ret != 0) {
+		LOG_ERR("Failed to enable USB");
+		return;
+	}
+
 	LOG_INF("entered main.");
 }
+
 

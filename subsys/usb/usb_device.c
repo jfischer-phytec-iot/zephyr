@@ -1646,8 +1646,6 @@ static int usb_device_init(struct device *dev)
 
 	usb_set_config(device_descriptor);
 
-	usb_enable();
-
 	return 0;
 }
 
