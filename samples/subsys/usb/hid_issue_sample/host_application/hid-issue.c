@@ -62,7 +62,8 @@ void usage()
 
 int main(int argc, char **argv)
 {
-	const uint8_t send_report[SEND_REPORT_SIZE + 1] = {0};
+	uint32_t i;
+	uint8_t send_report[SEND_REPORT_SIZE + 1] = {0};
 	uint8_t recv_report[RECV_REPORT_SIZE] = {0};
 	enum {SET, GET, ALT};
 	char type;
@@ -90,6 +91,9 @@ int main(int argc, char **argv)
 			printf("Set size is incorrect\n");
 			usage();
 			return 1;
+		}
+		for (i = 0; i < SEND_REPORT_SIZE + 1; i++) {
+			send_report[i] = (uint8_t)i;
 		}
 	}
 
