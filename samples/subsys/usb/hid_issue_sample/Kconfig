@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config USB_DEVICE_PID
+	default 0x000E
+
+source "Kconfig.zephyr"
