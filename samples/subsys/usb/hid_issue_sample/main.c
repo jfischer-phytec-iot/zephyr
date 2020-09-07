@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#define LOG_LEVEL LOG_LEVEL_WRN
+#define LOG_LEVEL LOG_LEVEL_INF
 LOG_MODULE_REGISTER(main);
 
 #define GET_REPORT_SIZE      128
@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(main);
 #define HID_MI_FEATURE       0xB1
 #define HID_GI_REPORT_COUNT2 0x96 /* Report count on 2 bytes */
 
-static struct device *hdev;
+static const struct device *hdev;
 
 const uint8_t hid_report_desc[] = {
 HID_GI_USAGE_PAGE, USAGE_GEN_DESKTOP,              /*USAGE_PAGE (Gen Desktop) */
@@ -34,7 +34,7 @@ HID_MI_COLLECTION_END,                             /*END_COLLECTION           */
 
 const uint16_t hid_report_desc_size = sizeof(hid_report_desc);
 
-static const uint8_t ret_report[GET_REPORT_SIZE]= {0};
+static uint8_t ret_report[GET_REPORT_SIZE] = {0};
 
 static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
@@ -50,20 +50,24 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 	}
 }
 
-int test_get_report(struct usb_setup_packet *setup, int32_t *len,
+static int test_get_report(struct usb_setup_packet *setup, int32_t *len,
 		uint8_t **data)
 {
-	LOG_DBG("Get cb");
+	LOG_INF("Get cb");
 	*data = ret_report;
 	*len = GET_REPORT_SIZE;
-	return 0;
 
+	return 0;
 }
 
-int test_set_report(struct usb_setup_packet *setup, int32_t *len,
+static int test_set_report(struct usb_setup_packet *setup, int32_t *len,
 		uint8_t **data)
 {
-	LOG_DBG("Set cb %d", *len);
+	size_t rsp_len = MIN(*len, sizeof(ret_report));
+
+	LOG_DBG("Set cb, length %u", rsp_len);
+	memcpy(ret_report, *data, rsp_len);
+
 	return 0;
 }
 
@@ -82,7 +86,7 @@ void main(void)
 
 }
 
-static int composite_pre_init(struct device *dev)
+static int composite_pre_init(const struct device *dev)
 {
 	hdev = device_get_binding("HID_0");
 	if (hdev == NULL) {
