@@ -84,17 +84,16 @@ int main(int argc, char **argv)
 		usage();
 		return 1;
 	}
-	
-	if (type == SET || type == ALT) {
-		set_size = strtol(argv[3], NULL, 10);
-		if (set_size < 1 || set_size > SEND_REPORT_SIZE) {
-			printf("Set size is incorrect\n");
-			usage();
-			return 1;
-		}
-		for (i = 0; i < SEND_REPORT_SIZE + 1; i++) {
-			send_report[i] = (uint8_t)i;
-		}
+
+	set_size = strtol(argv[3], NULL, 10);
+	if (set_size < 1 || set_size > SEND_REPORT_SIZE) {
+		printf("Set size is incorrect\n");
+		usage();
+		return 1;
+	}
+
+	for (i = 0; i < sizeof(send_report); i++) {
+		send_report[i] = (uint8_t)i;
 	}
 
 	fd = open(argv[1], O_RDWR);
@@ -119,7 +118,7 @@ int main(int argc, char **argv)
 		}
 		if (type == GET || type == ALT) {
 			recv_report[0] = 0;
-			if (ioctl(fd, HIDIOCGFEATURE(sizeof(recv_report)),
+			if (ioctl(fd, HIDIOCGFEATURE(set_size + 1),
 				  recv_report) < 0) {
 				perror("Get feature report");
 				error_count++;
