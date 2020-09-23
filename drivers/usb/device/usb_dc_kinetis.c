@@ -80,7 +80,7 @@ static struct buf_descriptor __aligned(512) bdt[(NUM_OF_EP_MAX) * 2 * 2];
 
 #define EP_BUF_NUMOF_BLOCKS		(NUM_OF_EP_MAX / 2)
 
-K_MEM_POOL_DEFINE(ep_buf_pool, 16, 512, EP_BUF_NUMOF_BLOCKS, 4);
+K_HEAP_DEFINE(ep_heap, 512 * EP_BUF_NUMOF_BLOCKS);
 
 struct usb_ep_ctrl_data {
 	struct ep_status {
@@ -95,8 +95,8 @@ struct usb_ep_ctrl_data {
 	} status;
 	uint16_t mps_in;
 	uint16_t mps_out;
-	struct k_mem_block mblock_in;
-	struct k_mem_block mblock_out;
+	uint8_t *ep_buf_in;
+	uint8_t *ep_buf_out;
 	usb_dc_ep_callback cb_in;
 	usb_dc_ep_callback cb_out;
 };
@@ -325,7 +325,7 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const cfg)
 {
 	uint8_t ep_idx = USB_EP_GET_IDX(cfg->ep_addr);
 	struct usb_ep_ctrl_data *ep_ctrl;
-	struct k_mem_block *block;
+	uint8_t *ep_buf;
 	uint8_t idx_even;
 	uint8_t idx_odd;
 
@@ -341,35 +341,39 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const cfg)
 		cfg->ep_type);
 
 	if (USB_EP_DIR_IS_OUT(cfg->ep_addr)) {
-		block = &(ep_ctrl->mblock_out);
+		ep_buf = ep_ctrl->ep_buf_out;
 	} else {
-		block = &(ep_ctrl->mblock_in);
+		ep_buf = ep_ctrl->ep_buf_in;
 	}
 
 	if (bdt[idx_even].buf_addr) {
-		k_mem_pool_free(block);
+		k_heap_free(&ep_heap, ep_buf);
 	}
 
 	USB0->ENDPOINT[ep_idx].ENDPT = 0;
 	(void)memset(&bdt[idx_even], 0, sizeof(struct buf_descriptor));
 	(void)memset(&bdt[idx_odd], 0, sizeof(struct buf_descriptor));
 
-	if (k_mem_pool_alloc(&ep_buf_pool, block, cfg->ep_mps * 2U, K_MSEC(10)) == 0) {
-		(void)memset(block->data, 0, cfg->ep_mps * 2U);
-	} else {
-		LOG_ERR("Memory allocation time-out");
+	ep_buf = k_heap_alloc(&ep_heap, cfg->ep_mps * 2U, K_NO_WAIT);
+	if (ep_buf == NULL) {
+		LOG_ERR("Memory allocation failed");
 		return -ENOMEM;
 	}
 
-	bdt[idx_even].buf_addr = (uint32_t)block->data;
-	LOG_INF("idx_even %x", (uint32_t)block->data);
-	bdt[idx_odd].buf_addr = (uint32_t)((uint8_t *)block->data + cfg->ep_mps);
-	LOG_INF("idx_odd %x", (uint32_t)((uint8_t *)block->data + cfg->ep_mps));
+	LOG_DBG("Memory allocation %p", ep_buf);
+	(void)memset(ep_buf, 0, cfg->ep_mps * 2U);
 
-	if (cfg->ep_addr & USB_EP_DIR_IN) {
+	bdt[idx_even].buf_addr = (uint32_t)ep_buf;
+	LOG_DBG("idx_even %p", ep_buf);
+	bdt[idx_odd].buf_addr = (uint32_t)(ep_buf + cfg->ep_mps);
+	LOG_DBG("idx_odd %p", ep_buf + cfg->ep_mps);
+
+	if (USB_EP_DIR_IS_IN(cfg->ep_addr)) {
 		dev_data.ep_ctrl[ep_idx].mps_in = cfg->ep_mps;
+		ep_ctrl->ep_buf_in = ep_buf;
 	} else {
 		dev_data.ep_ctrl[ep_idx].mps_out = cfg->ep_mps;
+		ep_ctrl->ep_buf_out = ep_buf;
 	}
 
 	bdt[idx_even].set.bc = cfg->ep_mps;
