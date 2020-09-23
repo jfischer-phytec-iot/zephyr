@@ -337,12 +337,6 @@ int usb_dc_ep_configure(const struct usb_dc_ep_cfg_data * const cfg)
 	idx_odd = get_bdt_idx(cfg->ep_addr, 1);
 	ep_ctrl = &dev_data.ep_ctrl[ep_idx];
 
-	if (ep_idx && (dev_data.ep_ctrl[ep_idx].status.in_enabled ||
-	    dev_data.ep_ctrl[ep_idx].status.out_enabled)) {
-		LOG_WRN("endpoint already configured");
-		return -EALREADY;
-	}
-
 	LOG_DBG("ep %x, mps %d, type %d", cfg->ep_addr, cfg->ep_mps,
 		cfg->ep_type);
 
@@ -526,12 +520,6 @@ int usb_dc_ep_enable(const uint8_t ep)
 
 	idx_even = get_bdt_idx(ep, 0);
 	idx_odd = get_bdt_idx(ep, 1);
-
-	if (ep_idx && (dev_data.ep_ctrl[ep_idx].status.in_enabled ||
-	    dev_data.ep_ctrl[ep_idx].status.out_enabled)) {
-		LOG_WRN("endpoint 0x%x already enabled", ep);
-		return -EALREADY;
-	}
 
 	if (USB_EP_DIR_IS_OUT(ep)) {
 		bdt[idx_even].set.bd_ctrl = BD_DTS_MASK | BD_OWN_MASK;
