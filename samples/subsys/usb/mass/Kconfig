@@ -31,6 +31,12 @@ config MSC_APP_STORAGE_FLASH_FATFS
 	imply FILE_SYSTEM
 	imply FAT_FILESYSTEM_ELM
 
+config MSC_APP_STORAGE_SDCARD
+	bool "Use FLASH disk and FAT file system"
+	imply DISK_ACCESS_SDHC
+	imply FILE_SYSTEM
+	imply FAT_FILESYSTEM_ELM
+
 config MSC_APP_STORAGE_FLASH_LITTLEFS
 	bool "Use FLASH disk and LittleFS"
 	imply DISK_ACCESS_FLASH
@@ -45,6 +51,17 @@ config DISK_RAM_VOLUME_SIZE
 config MASS_STORAGE_DISK_NAME
 	default "NAND" if DISK_ACCESS_FLASH
 	default "RAM" if DISK_ACCESS_RAM
+	default "SD" if DISK_ACCESS_SDHC
+
+if DISK_ACCESS_SDHC
+
+config SPI
+	default y
+
+config DISK_ACCESS_SPI_SDHC
+	default y
+
+endif #DISK_ACCESS_SDHC
 
 if DISK_ACCESS_FLASH
 
