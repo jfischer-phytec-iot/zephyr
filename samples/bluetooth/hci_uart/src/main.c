@@ -305,12 +305,31 @@ void bt_ctlr_assert_handle(char *file, uint32_t line)
 
 static int hci_uart_init(const struct device *unused)
 {
+	int ret;
+	uint32_t dtr = 0U;
+
 	LOG_DBG("");
+
+	ret = usb_enable(NULL);
+	if (ret != 0) {
+		LOG_ERR("Failed to enable USB");
+		return ret;
+	}
 
 	/* Derived from DT's bt-c2h-uart chosen node */
 	hci_uart_dev = device_get_binding(CONFIG_BT_CTLR_TO_HOST_UART_DEV_NAME);
 	if (!hci_uart_dev) {
 		return -EINVAL;
+	}
+
+	while (true) {
+		uart_line_ctrl_get(hci_uart_dev, UART_LINE_CTRL_DTR, &dtr);
+		if (dtr) {
+			break;
+		} else {
+			/* Give CPU resources to low priority threads. */
+			k_sleep(K_MSEC(100));
+		}
 	}
 
 	uart_irq_rx_disable(hci_uart_dev);
