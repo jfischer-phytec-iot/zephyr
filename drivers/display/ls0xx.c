@@ -42,11 +42,6 @@ LOG_MODULE_REGISTER(ls0xx, CONFIG_DISPLAY_LOG_LEVEL);
 #define LS0XX_BIT_VCOM        0x02
 #define LS0XX_BIT_CLEAR       0x04
 
-static uint8_t line_buf[LS0XX_BYTES_PER_LINE];
-
-static struct spi_buf tx_buf;
-static struct spi_buf_set buf_set = { .buffers = &tx_buf, .count = 1 };
-
 struct ls0xx_data {
 #if DT_INST_NODE_HAS_PROP(0, disp_en_gpios)
 	const struct device *disp_dev;
@@ -109,57 +104,73 @@ static int ls0xx_blanking_on(const struct device *dev)
 static int ls0xx_clear(const struct device *dev)
 {
 	struct ls0xx_data *driver = dev->data;
-	int err;
 	uint8_t clear_cmd[2] = { LS0XX_BIT_CLEAR, 0 };
+	struct spi_buf cmd_buf = { .buf = clear_cmd, sizeof(clear_cmd) };
+	struct spi_buf_set buf_set = { .buffers = &cmd_buf, .count = 1 };
+	int err;
 
-	tx_buf.len = sizeof(clear_cmd);
-	tx_buf.buf = &clear_cmd;
 	err = spi_write(driver->spi_dev, &driver->spi_config, &buf_set);
 	spi_release(driver->spi_dev, &driver->spi_config);
 
 	return err;
 }
 
-static int ls0xx_update_display(const struct device *dev,
-				uint16_t start_line,
-				uint16_t num_lines,
-				const uint8_t *buf)
+static int ls0xx_cmd(const struct device *dev, uint8_t cmd)
 {
 	struct ls0xx_data *driver = dev->data;
+	uint8_t buf[1] = { cmd };
+	struct spi_buf cmd_buf = { .buf = buf, .len = 1 };
+	struct spi_buf_set buf_set = { .buffers = &cmd_buf, .count = 1 };
+
+	return spi_write(driver->spi_dev, &driver->spi_config, &buf_set);
+}
+
+static int ls0xx_update_display(const struct device *dev,
+				uint8_t start_line,
+				uint8_t num_lines,
+				const uint8_t *data)
+{
+	struct ls0xx_data *driver = dev->data;
+	uint8_t ln = start_line;
+	uint8_t dummy = 42;
+	struct spi_buf line_buf[3] = {
+		{
+			.len = sizeof(ln),
+			.buf = &ln,
+		},
+		{
+			.len = LS0XX_BYTES_PER_LINE - 2,
+		},
+		{
+			.len = sizeof(dummy),
+			.buf = &dummy,
+		},
+	};
+	struct spi_buf_set line_set = {
+		.buffers = line_buf,
+		.count = ARRAY_SIZE(line_buf),
+	};
 	int err;
-	uint8_t write_cmd;
+
 
 	LOG_DBG("Lines %d to %d", start_line, start_line + num_lines - 1);
+	err = ls0xx_cmd(dev, LS0XX_BIT_WRITECMD);
 
-	write_cmd = LS0XX_BIT_WRITECMD;
-	tx_buf.len = sizeof(write_cmd);
-	tx_buf.buf =  &write_cmd;
-	err = spi_write(driver->spi_dev, &driver->spi_config, &buf_set);
-
-	if (buf != NULL) {
-		/* Send each line to the screen including
-		 * the line number and dummy bits
-		 */
-		tx_buf.len = LS0XX_BYTES_PER_LINE;
-		tx_buf.buf = &line_buf[0];
-		for (int l = start_line; l <= start_line + num_lines - 1; l++) {
-			line_buf[0] = l;
-			memcpy(&line_buf[1], buf,
-			       LS0XX_PANEL_WIDTH / LS0XX_PIXELS_PER_BYTE);
-			buf += LS0XX_PANEL_WIDTH / LS0XX_PIXELS_PER_BYTE;
-			err |= spi_write(driver->spi_dev, &driver->spi_config,
-					 &buf_set);
-		}
-
-		/* Send another trailing 8 bits for the last line
-		 * These can be any bits, it does not matter
-		 * just reusing the write_cmd buffer
-		 */
-		tx_buf.len = sizeof(write_cmd);
-		tx_buf.buf = &write_cmd;
+	/* Send each line to the screen including
+	 * the line number and dummy bits
+	 */
+	for (; ln <= start_line + num_lines - 1; ln++) {
+		line_buf[1].buf = (uint8_t *)data;
 		err |= spi_write(driver->spi_dev, &driver->spi_config,
-				 &buf_set);
+				 &line_set);
+		data += LS0XX_PANEL_WIDTH / LS0XX_PIXELS_PER_BYTE;
 	}
+
+	/* Send another trailing 8 bits for the last line
+	 * These can be any bits, it does not matter
+	 * just reusing the write_cmd buffer
+	 */
+	err |= ls0xx_cmd(dev, LS0XX_BIT_WRITECMD);
 
 	spi_release(driver->spi_dev, &driver->spi_config);
 
@@ -346,7 +357,7 @@ static struct display_driver_api ls0xx_driver_api = {
 	.set_orientation = ls0xx_set_orientation,
 };
 
-DEVICE_AND_API_INIT(ls0xx, DT_INST_LABEL(0), ls0xx_init,
+DEVICE_DT_INST_DEFINE(0, ls0xx_init, device_pm_control_nop,
 		    &ls0xx_driver, NULL,
 		    POST_KERNEL, CONFIG_APPLICATION_INIT_PRIORITY,
 		    &ls0xx_driver_api);
