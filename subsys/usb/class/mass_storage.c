@@ -321,13 +321,22 @@ static bool requestSense(void)
 
 static bool inquiryRequest(void)
 {
-	uint8_t inquiry[] = { 0x00, 0x80, 0x00, 0x01,
-	36 - 4, 0x80, 0x00, 0x00,
-	'Z', 'E', 'P', 'H', 'Y', 'R', ' ', ' ',
-	'Z', 'E', 'P', 'H', 'Y', 'R', ' ', 'U', 'S', 'B', ' ',
-	'D', 'I', 'S', 'K', ' ',
-	'0', '.', '0', '1',
-	};
+	const char *vendor_id = CONFIG_MASS_STORAGE_INQ_VENDOR_ID;
+	const char *product_id = CONFIG_MASS_STORAGE_INQ_PRODUCT_ID;
+	const char *revision = CONFIG_MASS_STORAGE_INQ_REVISION;
+
+	uint8_t inquiry[36] = {0x00, 0x80, 0x00, 0x01,
+				36 - 4, 0x80, 0x00, 0x00};
+	/* vendor id is max 8 characters, product id max 16,
+	 * and revision max 4. pad with spaces.
+	 */
+	memset(&inquiry[8], ' ', ARRAY_SIZE(inquiry) - 8);
+
+	memcpy(&inquiry[8], vendor_id, MIN(strlen(vendor_id), 8));
+
+	memcpy(&inquiry[16], product_id, MIN(strlen(product_id), 16));
+
+	memcpy(&inquiry[32], revision, MIN(strlen(revision), 4));
 
 	return write(inquiry, sizeof(inquiry));
 }
