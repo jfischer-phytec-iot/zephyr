@@ -180,6 +180,20 @@ static uint8_t max_lun_count;
 /*memory OK (after a memoryVerify)*/
 static bool memOK;
 
+struct dabc_inquiry_data {
+	uint8_t head[8];
+	uint8_t t10_vid[8];
+	uint8_t product_id[16];
+	uint8_t product_rev[4];
+} __packed;
+
+static const struct dabc_inquiry_data inq_rsp = {
+	.head = {0x00, 0x80, 0x00, 0x01, 36 - 4, 0x80, 0x00, 0x00},
+	.t10_vid = CONFIG_MASS_STORAGE_INQ_VENDOR_ID,
+	.product_id = CONFIG_MASS_STORAGE_INQ_PRODUCT_ID,
+	.product_rev = CONFIG_MASS_STORAGE_INQ_REVISION,
+};
+
 static void msd_state_machine_reset(void)
 {
 	stage = MSC_READ_CBW;
@@ -321,24 +335,7 @@ static bool requestSense(void)
 
 static bool inquiryRequest(void)
 {
-	const char *vendor_id = CONFIG_MASS_STORAGE_INQ_VENDOR_ID;
-	const char *product_id = CONFIG_MASS_STORAGE_INQ_PRODUCT_ID;
-	const char *revision = CONFIG_MASS_STORAGE_INQ_REVISION;
-
-	uint8_t inquiry[36] = {0x00, 0x80, 0x00, 0x01,
-				36 - 4, 0x80, 0x00, 0x00};
-	/* vendor id is max 8 characters, product id max 16,
-	 * and revision max 4. pad with spaces.
-	 */
-	memset(&inquiry[8], ' ', ARRAY_SIZE(inquiry) - 8);
-
-	memcpy(&inquiry[8], vendor_id, MIN(strlen(vendor_id), 8));
-
-	memcpy(&inquiry[16], product_id, MIN(strlen(product_id), 16));
-
-	memcpy(&inquiry[32], revision, MIN(strlen(revision), 4));
-
-	return write(inquiry, sizeof(inquiry));
+	return write((uint8_t *)&inq_rsp, sizeof(inq_rsp));
 }
 
 static bool modeSense6(void)
