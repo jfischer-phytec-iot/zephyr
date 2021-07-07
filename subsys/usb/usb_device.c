@@ -700,12 +700,11 @@ static bool usb_set_configuration(struct usb_setup_packet *setup)
 /*
  * @brief set USB interface
  *
- * @param [in] iface Interface index
- * @param [in] alt_setting  Alternate setting number
+ * @param [in] setup        The setup packet
  *
  * @return true if successfully configured false if error or unconfigured
  */
-static bool usb_set_interface(uint8_t iface, uint8_t alt_setting)
+static bool usb_set_interface(struct usb_setup_packet *setup)
 {
 	const uint8_t *p = usb_dev.descriptors;
 	const uint8_t *if_desc = NULL;
@@ -714,7 +713,7 @@ static bool usb_set_interface(uint8_t iface, uint8_t alt_setting)
 	uint8_t cur_iface = 0xFF;
 	bool ret = false;
 
-	LOG_DBG("iface %u alt_setting %u", iface, alt_setting);
+	LOG_DBG("Set Interface %u alternate %u", setup->wIndex, setup->wValue);
 
 	while (p[DESC_bLength] != 0U) {
 		switch (p[DESC_bDescriptorType]) {
@@ -723,9 +722,9 @@ static bool usb_set_interface(uint8_t iface, uint8_t alt_setting)
 			cur_alt_setting = p[INTF_DESC_bAlternateSetting];
 			cur_iface = p[INTF_DESC_bInterfaceNumber];
 
-			if (cur_iface == iface &&
-			    cur_alt_setting == alt_setting) {
-				usb_set_alt_setting(iface, alt_setting);
+			if (cur_iface == setup->wIndex &&
+			    cur_alt_setting == setup->wValue) {
+				usb_set_alt_setting(setup->wIndex, setup->wValue);
 				if_desc = (void *)p;
 			}
 
@@ -733,10 +732,10 @@ static bool usb_set_interface(uint8_t iface, uint8_t alt_setting)
 				cur_iface, cur_alt_setting);
 			break;
 		case USB_ENDPOINT_DESC:
-			if (cur_iface == iface) {
+			if (cur_iface == setup->wIndex) {
 				ep = (struct usb_ep_descriptor *)p;
 				ret = usb_eps_reconfigure(ep, cur_alt_setting,
-							  alt_setting);
+							  setup->wValue);
 			}
 			break;
 		default:
@@ -912,28 +911,20 @@ static bool usb_handle_std_interface_req(struct usb_setup_packet *setup,
 		data[0] = 0U;
 		data[1] = 0U;
 		*len = 2;
-		break;
-
-	case REQ_CLEAR_FEATURE:
-	case REQ_SET_FEATURE:
-		/* not defined for interface */
-		return false;
+		return true;
 
 	case REQ_GET_INTERFACE:
 		return usb_get_interface(setup, len, data_buf);
 
 	case REQ_SET_INTERFACE:
-		LOG_DBG("REQ_SET_INTERFACE");
-		usb_set_interface(setup->wIndex, setup->wValue);
-		*len = 0;
-		break;
+		return usb_set_interface(setup);
 
 	default:
-		LOG_DBG("Illegal interface req 0x%02x", setup->bRequest);
-		return false;
+		LOG_DBG("Unsupported bmRequestType 0x%02x bRequest 0x%02x",
+			setup->bmRequestType, setup->bRequest);
 	}
 
-	return true;
+	return false;
 }
 
 /**
