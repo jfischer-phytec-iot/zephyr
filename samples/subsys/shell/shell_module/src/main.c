@@ -338,7 +338,7 @@ void main(void)
 	const struct device *dev;
 	uint32_t dtr = 0;
 
-	dev = device_get_binding(CONFIG_UART_SHELL_ON_DEV_NAME);
+	dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_shell_uart));
 	if (dev == NULL || usb_enable(NULL)) {
 		return;
 	}
