@@ -92,7 +92,7 @@ static void uart_fifo_callback(const struct device *dev, void *user_data)
 
 static int test_fifo_read(void)
 {
-	const struct device *uart_dev = device_get_binding(UART_DEVICE_NAME);
+	const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
 	/* Verify uart_irq_callback_set() */
 	uart_irq_callback_set(uart_dev, uart_fifo_callback);
@@ -115,7 +115,7 @@ static int test_fifo_read(void)
 
 static int test_fifo_fill(void)
 {
-	const struct device *uart_dev = device_get_binding(UART_DEVICE_NAME);
+	const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 
 	char_sent = 0;
 
