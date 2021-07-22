@@ -10,7 +10,7 @@
 DT_CHOSEN_Z_CONSOLE := zephyr,console
 
 config UART_CONSOLE_ON_DEV_NAME
-	string "Device Name of UART Device for UART Console"
+	string "Device Name of UART Device for UART Console (DEPRECATED)"
 	default "$(dt_chosen_label,$(DT_CHOSEN_Z_CONSOLE))" if HAS_DTS
 	default "UART_0"
 	depends on (UART_CONSOLE || CONSOLE_SUBSYS)

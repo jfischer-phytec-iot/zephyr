@@ -33,6 +33,9 @@ Deprecated in this release
   were deprecated in favor of utilizing
   :c:macro:`DT_STRING_TOKEN` and :c:macro:`DT_STRING_UPPER_TOKEN`
 
+* Deprecate ``CONFIG_UART_CONSOLE_ON_DEV_NAME`` Kconfig option
+  in favor of direct use of chosen node ``zephyr,console``.
+
 Changes in this release
 
 ==========================
