@@ -116,13 +116,13 @@ void main(void)
 	const struct device *dev0, *dev1;
 	uint32_t dtr = 0U;
 
-	dev0 = device_get_binding("CDC_ACM_0");
+	dev0 = DEVICE_DT_GET(DT_INST(0, zephyr_cdc_acm_uart));
 	if (!dev0) {
 		LOG_DBG("CDC_ACM_0 device not found");
 		return;
 	}
 
-	dev1 = device_get_binding("CDC_ACM_1");
+	dev1 = DEVICE_DT_GET(DT_INST(1, zephyr_cdc_acm_uart));
 	if (!dev1) {
 		LOG_DBG("CDC_ACM_1 device not found");
 		return;

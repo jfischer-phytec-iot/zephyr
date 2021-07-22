@@ -567,13 +567,13 @@ void main(void)
 		return;
 	}
 
-	cdc0_dev = device_get_binding("CDC_ACM_0");
+	cdc0_dev = DEVICE_DT_GET(DT_INST(0, zephyr_cdc_acm_uart));
 	if (cdc0_dev == NULL) {
 		LOG_ERR("Cannot get USB CDC 0 Device");
 		return;
 	}
 
-	cdc1_dev = device_get_binding("CDC_ACM_1");
+	cdc1_dev = DEVICE_DT_GET(DT_INST(1, zephyr_cdc_acm_uart));
 	if (cdc1_dev == NULL) {
 		LOG_ERR("Cannot get USB CDC 1 Device");
 		return;
