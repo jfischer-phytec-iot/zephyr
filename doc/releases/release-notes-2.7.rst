@@ -45,6 +45,10 @@ Removed APIs in this release
 * Removed support for the deprecated Kconfig ``PRINTK64`` option.
 * Removed support for the deprecated ``bt_set_id_addr`` function.
 
+* Removed ``CONFIG_OPENTHREAD_COPROCESSOR_SPINEL_ON_UART_ACM`` and
+  ``CONFIG_OPENTHREAD_COPROCESSOR_SPINEL_ON_UART_DEV_NAME`` Kconfig options
+  in favor of chosen node ``zephyr,ot-uart``.
+
 ============================
 
 Stable API changes in this release
